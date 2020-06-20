@@ -5,6 +5,34 @@
 ## Project Set Up and Installation
 *TODO:* Explain the setup procedures to run your project. For instance, this can include your project directory structure, the models you need to download and where to place them etc. Also include details about how to install the dependencies your project requires.
 
+### Enter the project directory
+`cd mouse_pointer`
+
+### Setup a virtual environment
+`python3 -m venv env`
+
+### Activate the environment
+`source env/bin/activate`
+
+### Install required packages
+`pip install -r requirement.txt`
+
+### Source the openvino environment
+`source /opt/intel/openvino/bin/setupvars.sh`
+
+### Make a directory to save the models
+`mkdir models`
+
+### Downloading the required models
+- ```python3 /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/downloader.py --name landmarks-regression-retail-0009 -o models --cache_dir .```
+
+- ```python3 /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/downloader.py --name head-pose-estimation-adas-0001 -o models --cache_dir .```
+
+- ```python3 /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/downloader.py --name face-detection-adas-binary-0001 --precision FP32-INT1 -o models --cache_dir .```
+
+- ```python3 /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/downloader.py --name gaze-estimation-adas-0002 -o models --cache_dir .```
+
+
 ## Demo
 *TODO:* Explain how to run a basic demo of your model.
 
