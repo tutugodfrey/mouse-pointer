@@ -65,22 +65,55 @@ class Model_X:
         frame = frame.transpose((2, 0, 1))
         return frame
 
-    def preprocess_output(self, outputs):
+    def preprocess_output(self, outputs, image):
         '''
         Before feeding the output of this model to the next model,
         you might have to preprocess the output. This function is where you can do that.
         '''
-        raise NotImplementedError
+        height = image.shape[0]
+        width = image.shape[1]
+        faces = []
+        count = 1
+        for box in outputs[0][0]:
+            if box[2] >= 0.6:
+                x_min = int(box[3] * width)
+                y_min = int(box[4] * height)
+                x_max = int(box[5] * width)
+                y_max = int(box[6] * height)
+                cropped_image = image[y_min:y_max, x_min:x_max]
+                faces.append(cropped_image)
+        return faces
+
+def draw_boxes(pred, image):
+    height = image.shape[0]
+    width = image.shape[1]
+    count = 1
+    for box in pred[0][0]:
+        if box[2] >= 0.6:
+            x_min = int(box[3] * width)
+            y_min = int(box[4] * height)
+            x_max = int(box[5] * width)
+            y_max = int(box[6] * height)
+            frame = cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color=(0, 0, 225), thickness=2)
+            cropped_image = image[y_min:y_max, x_min:x_max]
+            cv2.imwrite(f'cropped_image_{count}.jpg', cropped_image)
+            count += 1
+    cv2.imwrite('face.jpg', frame)
 
 def main():
     CPU_EXTENSION_MAC = '/opt/intel/openvino_2019.3.376/deployment_tools/inference_engine/lib/intel64/libcpu_extension.dylib'
     model_name = 'models/intel/face-detection-adas-binary-0001/INT1/face-detection-adas-binary-0001'
-    image = 'bin/test-image1.jpg'
+    image = 'bin/test_image2.png'
     model = Model_X(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
     model.load_model()
     image = cv2.imread(image)
     pred = model.predict(image)
-    print(frame.shape)
+    faces = model.preprocess_output(pred, image)
+    for idx, face in enumerate(faces):
+        print(face.shape)
+        cv2.imwrite(f'cropped_image{idx}.jpg', face)
+    draw_boxes(pred, image)
+    print(pred.shape)
 
 
 
