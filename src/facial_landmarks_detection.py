@@ -7,7 +7,7 @@ import sys
 import cv2
 from openvino.inference_engine import IENetwork, IECore
 
-class Model_X:
+class FacialLandmarksDetector:
     '''
     Class for the Face Detection Model.
     '''
@@ -81,12 +81,12 @@ class Model_X:
         for key in coords.keys():
             x_coord = coords[key][0]
             y_coord = coords[key][1]
-            x_min = int(x_coord * width - 30)
-            y_min = int(y_coord * height - 30)
-            x_max = int(x_coord * width + 30)
-            y_max = int(y_coord * height + 30)
-            croped_image = image[y_min:y_max, x_min:x_max]
-            eyes[key] = croped_image
+            x_min = int(x_coord * (width - 30))
+            y_min = int(y_coord * (height - 30))
+            x_max = int(x_coord * (width + 30))
+            y_max = int(y_coord * (height + 30))
+            cropped_image = image[y_min:y_max, x_min:x_max]
+            eyes[key] = cropped_image
         return eyes
 
 def draw_landmarks(coords, frame, image):
@@ -113,7 +113,7 @@ def main():
     CPU_EXTENSION_MAC = '/opt/intel/openvino_2019.3.376/deployment_tools/inference_engine/lib/intel64/libcpu_extension.dylib'
     model_name = 'models/intel/landmarks-regression-retail-0009/FP16/landmarks-regression-retail-0009'
     image = 'bin/test_image2.png'
-    model = Model_X(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
+    model = FacialLandmarksDetector(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
     model.load_model()
     image = cv2.imread(image)
     pred, frame = model.predict(image)

@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from openvino.inference_engine import IENetwork, IECore
 
-class Model_X:
+class HeadPoseEstimation:
     '''
     Class for the Face Detection Model.
     '''
@@ -79,7 +79,7 @@ def main():
     CPU_EXTENSION_MAC = '/opt/intel/openvino_2019.3.376/deployment_tools/inference_engine/lib/intel64/libcpu_extension.dylib'
     model_name = 'models/intel/head-pose-estimation-adas-0001/FP16/head-pose-estimation-adas-0001'
     image = 'bin/test-image1.jpg'
-    model = Model_X(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
+    model = HeadPoseEstimation(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
     model.load_model()
     image = cv2.imread(image)
     pred = model.predict(image)

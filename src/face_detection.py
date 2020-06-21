@@ -7,7 +7,7 @@ import sys
 import cv2
 from openvino.inference_engine import IENetwork, IECore
 
-class Model_X:
+class FaceDetector:
     '''
     Class for the Face Detection Model.
     '''
@@ -73,7 +73,6 @@ class Model_X:
         height = image.shape[0]
         width = image.shape[1]
         faces = []
-        count = 1
         for box in outputs[0][0]:
             if box[2] >= 0.6:
                 x_min = int(box[3] * width)
@@ -104,7 +103,7 @@ def main():
     CPU_EXTENSION_MAC = '/opt/intel/openvino_2019.3.376/deployment_tools/inference_engine/lib/intel64/libcpu_extension.dylib'
     model_name = 'models/intel/face-detection-adas-binary-0001/INT1/face-detection-adas-binary-0001'
     image = 'bin/test_image2.png'
-    model = Model_X(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
+    model = FaceDetector(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
     model.load_model()
     image = cv2.imread(image)
     pred = model.predict(image)
