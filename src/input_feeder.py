@@ -28,6 +28,7 @@ class InputFeeder:
             self.cap=cv2.VideoCapture(0)
         else:
             self.cap=cv2.imread(self.input_file)
+        
 
     def next_batch(self):
         '''
