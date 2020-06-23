@@ -8,7 +8,7 @@ from face_detection import FaceDetector
 from facial_landmarks_detection import FacialLandmarksDetector
 from gaze_estimation import GazeEstimation, main as gazer
 
-from draw_image import draw_boxes
+from utils import OutputHandler
 from input_feeder import InputFeeder
 from mouse_controller import MouseController
 
@@ -23,9 +23,10 @@ def main():
 
     input_feeder = InputFeeder('video', 'bin/demo.mp4')
     # input_feeder = InputFeeder('cam', 'bin/demo.mp4')
-    input_feeder.load_data()
-
-    for image in input_feeder.next_batch():
+    width, height = input_feeder.load_data()
+    video_writer = cv2.VideoWriter('cropped_face_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 5, (width, height))
+    video_writer2 = cv2.VideoWriter('original_video_with_frame.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 5, (width, height))     
+    for frame in input_feeder.next_batch():
         # Initialize the models
         face_detector = FaceDetector(model_name=face_detector_model, device='CPU', extensions=CPU_EXTENSION_MAC)
         facial_landmarks = FacialLandmarksDetector(model_name=facial_landmark_model, device='CPU', extensions=CPU_EXTENSION_MAC)
@@ -37,13 +38,16 @@ def main():
         facial_landmarks.load_model()
         head_pose_estimation.load_model()
         gaze_estimation.load_model()
-
+        output_handler = OutputHandler()
         try:
-            if image is None:
+            if frame is None:
                 raise TypeError
             else:
-                pred = face_detector.predict(image)
-                image = face_detector.preprocess_output(pred, image)
+                pred = face_detector.predict(frame)
+                image = face_detector.preprocess_output(pred, frame, 0.6)
+                frame = output_handler.draw_boxes(pred[0][0], frame, 0.6)
+                output_handler.write_frame(image[0], video_writer, width, height)
+                output_handler.write_frame(frame, video_writer2, width, height)
 
             head_pose = head_pose_estimation.predict(image[0])
             head_pose = np.array([head_pose])
