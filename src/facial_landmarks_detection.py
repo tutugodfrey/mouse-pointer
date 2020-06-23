@@ -76,7 +76,6 @@ class FacialLandmarksDetector:
     def get_eyes(self, coords, image):
         height = image.shape[0]
         width = image.shape[1]
-        # frame = cv2.resize(frame.transpose((1, 2, 0)), (width, height))
         eyes = {}
         for key in coords.keys():
             x_coord = coords[key][0]
@@ -125,5 +124,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# py src/facial_landmarks_detection.py

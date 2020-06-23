@@ -6,6 +6,7 @@ import os
 import sys
 import cv2
 from openvino.inference_engine import IENetwork, IECore
+from utils import OutputHandler
 
 class FaceDetector:
     '''
@@ -19,6 +20,7 @@ class FaceDetector:
         self.model_name = model_name
         self.device = device
         self.extensions = extensions
+        self.output_handler = OutputHandler()
 
     def load_model(self):
         '''
@@ -65,39 +67,20 @@ class FaceDetector:
         frame = frame.transpose((2, 0, 1))
         return frame
 
-    def preprocess_output(self, outputs, image):
+    def preprocess_output(self, outputs, frame, threshold):
         '''
         Before feeding the output of this model to the next model,
         you might have to preprocess the output. This function is where you can do that.
         '''
-        height = image.shape[0]
-        width = image.shape[1]
+        height = frame.shape[0]
+        width = frame.shape[1]
         faces = []
         for box in outputs[0][0]:
-            if box[2] >= 0.6:
-                x_min = int(box[3] * width)
-                y_min = int(box[4] * height)
-                x_max = int(box[5] * width)
-                y_max = int(box[6] * height)
-                cropped_image = image[y_min:y_max, x_min:x_max]
+            if box[2] >= threshold:
+                coords = box[3:]
+                cropped_image = self.output_handler.crop_image(coords, frame)
                 faces.append(cropped_image)
         return faces
-
-def draw_boxes(pred, image):
-    height = image.shape[0]
-    width = image.shape[1]
-    count = 1
-    for box in pred[0][0]:
-        if box[2] >= 0.6:
-            x_min = int(box[3] * width)
-            y_min = int(box[4] * height)
-            x_max = int(box[5] * width)
-            y_max = int(box[6] * height)
-            frame = cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color=(0, 0, 225), thickness=2)
-            cropped_image = image[y_min:y_max, x_min:x_max]
-            cv2.imwrite(f'cropped_image_{count}.jpg', cropped_image)
-            count += 1
-    cv2.imwrite('face.jpg', frame)
 
 def main():
     CPU_EXTENSION_MAC = '/opt/intel/openvino_2019.3.376/deployment_tools/inference_engine/lib/intel64/libcpu_extension.dylib'
@@ -105,14 +88,15 @@ def main():
     image = 'bin/test_image2.png'
     model = FaceDetector(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
     model.load_model()
+    output_handler = OutputHandler()
     image = cv2.imread(image)
     pred = model.predict(image)
-    faces = model.preprocess_output(pred, image)
+    faces = model.preprocess_output(pred, image, 0.6)
     for idx, face in enumerate(faces):
-        print(face.shape)
         cv2.imwrite(f'cropped_image{idx}.jpg', face)
-    draw_boxes(pred, image)
-    print(pred.shape)
+    
+    new_image = output_handler.draw_boxes(pred[0][0], image, 0.6)
+    cv2.imwrite('new_image.jpg', new_image)
 
 
 
