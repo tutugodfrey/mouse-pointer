@@ -47,7 +47,7 @@ class FaceDetector:
         self.exec_net.start_async(request_id=0, inputs={ self.input_name: frame })
         if self.exec_net.requests[0].wait(-1) == 0:
             pred = self.exec_net.requests[0].outputs[self.output_name]
-            return pred
+            return pred, frame
 
     def check_model(self):
         self.input_name = next(iter(self.model.inputs))
@@ -72,14 +72,14 @@ class FaceDetector:
         Before feeding the output of this model to the next model,
         you might have to preprocess the output. This function is where you can do that.
         '''
+        frame = frame[:].transpose(1, 2, 0)
         height = frame.shape[0]
         width = frame.shape[1]
         faces = []
-        for box in outputs[0][0]:
-            if box[2] >= threshold:
-                coords = box[3:]
-                cropped_image = self.output_handler.crop_image(coords, frame)
-                faces.append(cropped_image)
+        coords = self.output_handler.get_box_coordinates(outputs[0][0], frame, threshold)
+        for coord in coords:
+            cropped_image = self.output_handler.crop_image(coord, frame)
+            faces.append(cropped_image)
         return faces
 
 def main():
