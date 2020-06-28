@@ -57,6 +57,7 @@ class FacialLandmarksDetector:
         '''
         height, width = self.input_shape[2], self.input_shape[3]
         frame = cv2.resize(image, (width, height))
+
         return frame.transpose((2, 0, 1))
 
         
@@ -66,47 +67,33 @@ class FacialLandmarksDetector:
         Before feeding the output of this model to the next model,
         you might have to preprocess the output. This function is where you can do that.
         '''
-        # print(outputs.shape, outputs)
-        eyes_coords = {
+        landmarks_coords = {
             'left_eye': [outputs[0][0], outputs[0][1]],
-            'right_eye':[outputs[0][2], outputs[0][3]]
+            'right_eye':[outputs[0][2], outputs[0][3]],
+            'nose': [outputs[0][4], outputs[0][5]],
+            'left_lip_corner': [outputs[0][6], outputs[0][7]],
+            'right_lip_cornet': [outputs[0][8], outputs[0][9]]
         }
-        return eyes_coords
+
+        return landmarks_coords
 
     def get_eyes(self, coords, image):
+        image = image.transpose((1, 2, 0))
         height = image.shape[0]
         width = image.shape[1]
         eyes = {}
         for key in coords.keys():
-            x_coord = coords[key][0]
-            y_coord = coords[key][1]
-            x_min = int(x_coord * (width - 30))
-            y_min = int(y_coord * (height - 30))
-            x_max = int(x_coord * (width + 30))
-            y_max = int(y_coord * (height + 30))
-            cropped_image = image[y_min:y_max, x_min:x_max]
-            eyes[key] = cropped_image
-        return eyes
+            if key == 'left_eye' or key == 'right_eye':
+                x_coord = coords[key][0]
+                y_coord = coords[key][1]
+                x_min = int(x_coord * (width - 15))
+                y_min = int(y_coord * (height - 15))
+                x_max = int(x_coord * (width + 15))
+                y_max = int(y_coord * (height + 15))
+                cropped_image = image[y_min:y_max, x_min:x_max]
+                eyes[key] = cropped_image
 
-def draw_landmarks(coords, frame, image):
-    height = image.shape[0]
-    width = image.shape[1]
-    frame = cv2.resize(frame.transpose((1, 2, 0)), (width, height))
-    for key in coords.keys():
-        x_coord = coords[key][0]
-        y_coord = coords[key][1]
-        frame = cv2.circle(frame, (x_coord*width, y_coord*height), radius=2, color=(0, 0, 225), thickness=3)
-        frame = cv2.rectangle(frame,
-            (x_coord*width - 30, y_coord*height - 30),
-            (x_coord*width + 30, y_coord*height + 30),
-            color=(0, 0, 225), thickness=3)
-        x_min = int(x_coord * width - 30)
-        y_min = int(y_coord * height - 30)
-        x_max = int(x_coord * width + 30)
-        y_max = int(y_coord * height + 30)
-        image = frame[y_min:y_max, x_min:x_max]
-        cv2.imwrite(key+'.jpg', image)
-    cv2.imwrite('result.jpg', frame)
+        return eyes
 
 def main():
     CPU_EXTENSION_MAC = '/opt/intel/openvino_2019.3.376/deployment_tools/inference_engine/lib/intel64/libcpu_extension.dylib'
@@ -120,7 +107,6 @@ def main():
     eyes = model.get_eyes(pred, image)
     for eye, cropped_image in eyes.items():
         cv2.imwrite(eye +'_image.jpg', cropped_image)
-    # draw_landmarks(pred, frame, image)
 
 if __name__ == '__main__':
     main()
