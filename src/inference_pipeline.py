@@ -21,6 +21,7 @@ parser.add_argument('-x', '--extensions', help='Path to CPU extensions for unsup
 parser.add_argument('-v', '--visualize', type=bool,  help='Control whether output of all intermediate models should be displayed. Enable visually all type of outputs. default 0. set to 1 if yes', default=0)
 parser.add_argument('-vf', '--visualize_face', type=bool,  help='Control whether output of face detector model should be displayed default 0. set to 1 if yes', default=0)
 parser.add_argument('-vl', '--visualize_landmarks', type=bool,  help='Control whether output of landmark model should be displayed default 0. set to 1 if yes', default=0)
+parser.add_argument('-vh', '--visualize_head_pose', type=bool,  help='Control whether output of intermediate models should be displayed  for head pose. Default 0. set to 1 if yes', default=0)
 parser.add_argument('-vo', '--visualize_output', type=bool,  help='Control whether output of intermediate models should be displayed default 0. set to 1 if yes', default=0)
 parser.add_argument('-fd', '--face_detection_precision',  help='Path to CPU extensions for unsupported layers', default='INT1')
 parser.add_argument('-hd', '--head_pose_precision',  help='Path to CPU extensions for unsupported layers', default='FP16')
@@ -39,6 +40,7 @@ def main():
     visualize = args.visualize
     visualize_face = args.visualize_face
     visualize_landmarks = args.visualize_landmarks
+    visualize_head_pose = args.visualize_head_pose
     visualize_output = args.visualize_output
     precision = args.precision
     speed = args.speed
@@ -65,12 +67,14 @@ def main():
         return
     
     width, height = input_feeder.load_data()
+
     # initialize video writers
     if visualize:
         cropped_face_video_writer = cv2.VideoWriter('cropped_face_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
         output_video_with_drawings_writer = cv2.VideoWriter('output_video_with_drawings.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
         landmark_drawings_writer = cv2.VideoWriter('landmarks_drawings.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
         landmark_prediction_writer = cv2.VideoWriter('landmark_prediction.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+        head_pose_angle_writer = cv2.VideoWriter('head_pose_angle_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
 
     if visualize_face and not visualize:
         cropped_face_video_writer = cv2.VideoWriter('cropped_face_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
@@ -81,6 +85,10 @@ def main():
     if visualize_landmarks and not visualize:
         landmark_drawings_writer = cv2.VideoWriter('landmarks_drawings.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
         landmark_prediction_writer = cv2.VideoWriter('landmark_prediction.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+    
+    if visualize_head_pose and not visualize:
+        head_pose_angle_writer = cv2.VideoWriter('head_pose_angle_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+
 
     for frame in input_feeder.next_batch():
         # Initialize the models
@@ -101,10 +109,12 @@ def main():
             else:
                 original_frame = frame[:]
                 pred, frame = face_detector.predict(frame)
-                face = face_detector.preprocess_output(pred, frame, 0.6)[0]
+                faces, face_coords = face_detector.preprocess_output(pred, frame, 0.6)
+                face = faces[0]
+                x_min, y_min, x_max, y_max = face_coords[0]
 
-            head_pose = head_pose_estimation.predict(face)
-            head_pose = np.array([head_pose])
+                head_pose, head_pose_frame = head_pose_estimation.predict(face)
+                head_pose_frame = head_pose_frame.transpose((1, 2, 0))
         except IndexError:
             print('No more frame to read')
             input_feeder.close()
@@ -162,15 +172,23 @@ def main():
             frame = output_handler.draw_landmark(landmarks_coords['left_eye'], pred[0][0], frame, face, landmarks_face)
             frame = output_handler.draw_landmark(landmarks_coords['right_eye'], pred[0][0], frame, face, landmarks_face)
             output_handler.write_frame(frame, output_video_with_drawings_writer, width, height)
+        
+        if visualize_head_pose:
+            head_frame = output_handler.draw_head_pose(head_pose, head_pose_frame, face, face_coords[0], frame)
+            output_handler.write_frame(head_frame, head_pose_angle_writer, width, height)
 
+        yaw = head_pose['angle_y_fc']
+        pitch = head_pose['angle_p_fc']
+        roll = head_pose['angle_r_fc']
+        head_pose_angles = np.array([[yaw, pitch, roll]])
         gaze_estimate = gaze_estimation.predict({
             'left_eye_image': left_eye_image,
             'right_eye_image': right_eye_image,
-            'head_pose_angles': head_pose})
-        
-        control_mouse = MouseController(precision, speed)
-        if gaze_estimate[0][0]:
-            control_mouse.move(gaze_estimate[0][0], gaze_estimate[0][1])
+            'head_pose_angles': head_pose_angles})
+                
+        # control_mouse = MouseController(precision, speed)
+        # if gaze_estimate[0][0]:
+        #     control_mouse.move(gaze_estimate[0][0], gaze_estimate[0][1])
 
 
 if __name__ == '__main__':
