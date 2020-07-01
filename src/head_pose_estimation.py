@@ -41,13 +41,12 @@ class HeadPoseEstimation:
         TODO: You will need to complete this method.
         This method is meant for running predictions on the input image.
         '''
-
         frame = self.preprocess_input(image)
         self.exec_net.start_async(request_id=0, inputs={ self.input_name: frame })
         if self.exec_net.requests[0].wait(-1) == 0:
-            self.output_coords = [self.exec_net.requests[0].outputs[output_name].astype(float).item()
-                                for output_name in self.output_names]
-            return self.output_coords
+            self.output_coords = {output_name: self.exec_net.requests[0].outputs[output_name].astype(float).item()
+                                for output_name in self.output_names}
+            return self.output_coords, frame
 
     def check_model(self):
         self.input_name = next(iter(self.model.inputs))
@@ -55,7 +54,8 @@ class HeadPoseEstimation:
         self.output_names = list(self.model.outputs.keys())
         self.output_dict = {}
         for name in self.output_names:
-            self.output_dict[name] = self.model.outputs[name].shape        
+            self.output_dict[name] = self.model.outputs[name].shape  
+      
 
     def preprocess_input(self, image):
         '''
@@ -64,6 +64,7 @@ class HeadPoseEstimation:
         '''
         height, width = self.input_shape[2], self.input_shape[3]
         frame = cv2.resize(image, (width, height))
+
         return frame.transpose((2, 0, 1))
 
     def preprocess_output(self, outputs):
@@ -84,7 +85,6 @@ def main():
     image = cv2.imread(image)
     pred = model.predict(image)
     pred = model.preprocess_output(pred)
-    print(pred, pred.shape, 'GGGGGGGGGGGGGGGGGGG')
 
 if __name__ == '__main__':
     main()

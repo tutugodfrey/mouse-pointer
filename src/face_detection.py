@@ -80,7 +80,7 @@ class FaceDetector:
         for coord in coords:
             cropped_image = self.output_handler.crop_image(coord, frame)
             faces.append(cropped_image)
-        return faces
+        return faces, coords
 
 def main():
     CPU_EXTENSION_MAC = '/opt/intel/openvino_2019.3.376/deployment_tools/inference_engine/lib/intel64/libcpu_extension.dylib'
