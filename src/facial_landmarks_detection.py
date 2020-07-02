@@ -86,10 +86,10 @@ class FacialLandmarksDetector:
             if key == 'left_eye' or key == 'right_eye':
                 x_coord = coords[key][0]
                 y_coord = coords[key][1]
-                x_min = int(x_coord * (width - 15))
-                y_min = int(y_coord * (height - 15))
-                x_max = int(x_coord * (width + 15))
-                y_max = int(y_coord * (height + 15))
+                x_min = int(x_coord * (width - 35))
+                y_min = int(y_coord * (height - 35))
+                x_max = int(x_coord * (width + 35))
+                y_max = int(y_coord * (height + 35))
                 cropped_image = image[y_min:y_max, x_min:x_max]
                 eyes[key] = cropped_image
 

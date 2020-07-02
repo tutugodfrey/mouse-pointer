@@ -88,5 +88,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# py src/head_pose_estimation.py
