@@ -12,15 +12,15 @@ class FaceDetector:
     '''
     Class for the Face Detection Model.
     '''
-    def __init__(self, model_name, device='CPU', extensions=None):
+    def __init__(self, model_name, args):
         '''
         TODO: Use this to set your instance variables.
         '''
 
         self.model_name = model_name
-        self.device = device
-        self.extensions = extensions
-        self.output_handler = OutputHandler()
+        self.device = args.device
+        self.extensions = args.extensions
+        self.output_handler = OutputHandler(args)
 
     def load_model(self):
         '''
@@ -73,8 +73,6 @@ class FaceDetector:
         you might have to preprocess the output. This function is where you can do that.
         '''
         frame = frame[:].transpose(1, 2, 0)
-        height = frame.shape[0]
-        width = frame.shape[1]
         faces = []
         coords = self.output_handler.get_box_coordinates(outputs[0][0], frame, threshold)
         for coord in coords:
@@ -86,16 +84,17 @@ def main():
     CPU_EXTENSION_MAC = '/opt/intel/openvino_2019.3.376/deployment_tools/inference_engine/lib/intel64/libcpu_extension.dylib'
     model_name = 'models/intel/face-detection-adas-binary-0001/INT1/face-detection-adas-binary-0001'
     image = 'bin/test_image2.png'
+    threshold = 0.6
     model = FaceDetector(model_name=model_name, device='CPU', extensions=CPU_EXTENSION_MAC)
     model.load_model()
     output_handler = OutputHandler()
     image = cv2.imread(image)
     pred = model.predict(image)
-    faces = model.preprocess_output(pred, image, 0.6)
+    faces = model.preprocess_output(pred, image, threshold)
     for idx, face in enumerate(faces):
         cv2.imwrite(f'cropped_image{idx}.jpg', face)
     
-    new_image = output_handler.draw_boxes(pred[0][0], image, 0.6)
+    new_image = output_handler.draw_boxes(pred[0][0], image, threshold)
     cv2.imwrite('new_image.jpg', new_image)
 
 

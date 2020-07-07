@@ -2,8 +2,62 @@ import cv2
 import numpy as np
 import math
 class OutputHandler:
-    def __init__(self):
-        return None
+    def __init__(self, args):
+        self.visualize = args.visualize
+        self.visualize_face = args.visualize_face
+        self.visualize_landmarks = args.visualize_landmarks
+        self.visualize_head_pose = args.visualize_head_pose
+        self.visualize_gaze = args.visualize_gaze
+        self.visualize_output = args.visualize_output
+        self.threshold = args.threshold
+
+        # set frames
+        self.frame = None
+        self.face_frame = None
+        self.head_pose_frame = None
+        self.landmarks_frame = None
+        self.landmarks_coords = None
+        self.gaze_frame = None
+        # self.landmarks_face = None
+        self.head_pose_pred = None
+        self.face_coords = None
+        self.gaze_estimate = None
+        self.right_eye_center = None
+        self.left_eye_center = None
+        self.center_of_face = None
+        
+    def initalize_video_writer(self, width=None, height=None):
+        self.width, self.height = width, height
+
+        # initialize video writers
+        if self.visualize:
+            self.cropped_face_video_writer = cv2.VideoWriter('cropped_face_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+            self.output_video_with_drawings_writer = cv2.VideoWriter('output_video_with_drawings.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+            self.landmark_drawings_writer = cv2.VideoWriter('landmarks_drawings.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+            self.landmark_prediction_writer = cv2.VideoWriter('landmark_prediction.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+            self.head_pose_angle_writer = cv2.VideoWriter('head_pose_angle_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+
+
+        if self.visualize_face and not self.visualize:
+            self.cropped_face_video_writer = cv2.VideoWriter('cropped_face_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+
+        if self.visualize_output and not self.visualize:
+            self.output_video_with_drawings_writer = cv2.VideoWriter('output_video_with_drawings.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+
+        if self.visualize_landmarks and not self.visualize:
+            self.landmark_drawings_writer = cv2.VideoWriter('landmarks_drawings.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+            self.landmark_prediction_writer = cv2.VideoWriter('landmark_prediction.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+        
+        if self.visualize_head_pose and not self.visualize:
+            self.head_pose_angle_writer = cv2.VideoWriter('head_pose_angle_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+
+        if self.visualize_gaze:
+            self.gaze_direction_writer = cv2.VideoWriter('gaze_direction_video.mp4', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 3, (width, height))
+    
+    def prepare_visualizer(self):
+        self.face_coords = self.get_box_coordinates(self.face_pred, self.frame, 0.6)
+        self.right_eye_center = self.get_point_of_landmark(self.landmarks_coords['right_eye'], self.face_coords, self.frame, self.face_frame, self.landmarks_frame)
+        self.left_eye_center = self.get_point_of_landmark(self.landmarks_coords['left_eye'], self.face_coords, self.frame, self.face_frame, self.landmarks_frame)
 
     def draw_boxes(self, pred, image, threshold):
         '''
@@ -25,17 +79,42 @@ class OutputHandler:
 
         return image
 
-    def draw_landmark(self, pred, face_pred, image, face, landmark_face):
+    def draw_landmark(self, image, point):
         '''
         Draw bounding boxes and circle on image base on prediction (pred)
-        pred: predicted coordinate of a facial landmark
+        landmark_pred: predicted coordinate of a facial landmark
         face_pred: prediction from the face_detection model (coordinate of detected faces as 2D array)
         image: original image that has been resized by face_detection model
         face: the crop of the face detected by face_detection model
         landmark_face: face resized by landmark_detection model 48x48
         return image with width drawings
         '''
-        landmark_face = landmark_face.transpose((1,2,0))
+        landmark_point_x, landmark_point_y = point
+        image = cv2.circle(image,
+            (landmark_point_x, landmark_point_y),
+            radius=2,
+            color=(225, 0, 225),
+            thickness=1)
+
+        image = cv2.rectangle(image,
+            (landmark_point_x - 15, landmark_point_y - 15),
+            (landmark_point_x + 15, landmark_point_y + 15),
+            color=(0, 0, 225),
+            thickness=1)
+
+        return image
+        
+    def get_point_of_landmark(self, landmark_pred, face_coords, image, face, landmark_frame):
+        '''
+        Get the point of predicted landmark with reference to the original image
+        landmark_pred: predicted coordinate of a facial landmark
+        face_pred: prediction from the face_detection model (coordinate of detected faces as 2D array)
+        image: original image that has been resized by face_detection model
+        face: the crop of the face detected by face_detection model
+        landmark_frame: face resized by landmark_detection model 48x48
+        return image with width drawings
+        '''
+        landmark_frame = landmark_frame.transpose((1,2,0))
         
         image_y = image.shape[0]
         image_x = image.shape[1]
@@ -43,17 +122,16 @@ class OutputHandler:
         face_y = face.shape[0]
         face_x = face.shape[1]
 
-        landmark_face_y = landmark_face.shape[0]
-        landmark_face_x = landmark_face.shape[1]
+        landmark_frame_y = landmark_frame.shape[0]
+        landmark_frame_x = landmark_frame.shape[1]
 
-        resize_ratio_y = landmark_face_y / face_y
-        resize_ratio_x = landmark_face_x / face_x
+        resize_ratio_y = landmark_frame_y / face_y
+        resize_ratio_x = landmark_frame_x / face_x
 
-        eye_pos_x = int((pred[0] * landmark_face_x) / resize_ratio_x)
-        eye_pos_y = int((pred[1] * landmark_face_y) / resize_ratio_y)
+        landmark_pos_x = int((landmark_pred[0] * landmark_frame_x) / resize_ratio_x)
+        landmark_pos_y = int((landmark_pred[1] * landmark_frame_y) / resize_ratio_y)
 
-        coords = self.get_box_coordinates(face_pred, image, 0.6)
-        for coord in coords:
+        for coord in face_coords:
             x_min, y_min, x_max, y_max = coord
 
             diff_crop_x_min = x_min
@@ -61,21 +139,30 @@ class OutputHandler:
             diff_crop_x_max = image_x - x_max
             diff_crop_y_max = image_y - y_max
 
-            eye_pos_x = eye_pos_x + diff_crop_x_min
-            eye_pos_y = eye_pos_y + diff_crop_y_min
-            image = cv2.circle(image,
-                (eye_pos_x, eye_pos_y),
-                radius=2,
-                color=(225, 0, 225),
-                thickness=1)
+            landmark_pos_x = landmark_pos_x + diff_crop_x_min
+            landmark_pos_y = landmark_pos_y + diff_crop_y_min
 
-            image = cv2.rectangle(image,
-                (eye_pos_x - 15, eye_pos_y - 15),
-                (eye_pos_x + 15, eye_pos_y + 15),
-                color=(0, 0, 225),
-                thickness=1)
+        return landmark_pos_x, landmark_pos_y
 
-        return image
+    def get_center_of_face(self):
+        '''
+        Calculate the center of the detected face
+        Set the center_of_face class variable
+        return the center of face
+        '''
+        x_min, y_min, x_man, y_max = self.face_coords[0]
+        head_pose_y = self.head_pose_frame.shape[0]
+        head_pose_x = self.head_pose_frame.shape[1]
+        center_of_face_x = head_pose_x / 2
+        center_of_face_y = head_pose_y / 2
+
+        face_resize_ratio_x = head_pose_x / self.face_frame.shape[1]
+        face_resize_ratio_y = head_pose_y / self.face_frame.shape[0]
+        center_of_face_x = (center_of_face_x  / face_resize_ratio_x) + x_min
+        center_of_face_y = (center_of_face_y  / face_resize_ratio_y) + y_min
+        self.center_of_face = (center_of_face_x, center_of_face_y, 0)
+            
+        return self.center_of_face
 
     def draw_facial_landmarks(self, landmarks_coords, frame, width, height):
         '''
@@ -118,7 +205,6 @@ class OutputHandler:
         height: desired height of output video
         Note: width and height should be the same as set in the writer object.
         '''
-
         frame = cv2.resize(frame, (width, height))
         writer.write(frame)
     
@@ -126,7 +212,7 @@ class OutputHandler:
         '''
         pred: prediction from an face detection/ object detection model shape ([X x 7])
         typically [200x7] with the outer dimensions striped out
-        image: image used for the predictions
+        image: image used for the predictions, structure (H x W x C)
         threshold: confidence threshold of boxes to be returned
         returns: an array of the coordinate of bounding boxes
         '''
@@ -159,7 +245,6 @@ class OutputHandler:
     # source: udacity knowledge answer( https://knowledge.udacity.com/questions/171017)
     # source: https://www.learnopencv.com/rotation-matrix-to-euler-angles/
     def draw_axes(self, frame, center_of_face, yaw, pitch, roll, scale, focal_length):
-        
         yaw *= np.pi / 180.0
         pitch *= np.pi / 180.0
         roll *= np.pi / 180.0
@@ -210,9 +295,9 @@ class OutputHandler:
         cv2.line(frame, p1, p2, (225, 0, 0), 2)
         cv2.circle(frame, p2, 3, (225, 0, 0), 2)
 
-        return frame
+        return self.frame
     
-    def draw_head_pose(self, head_pose, head_pose_frame, face, face_coords, frame):
+    def draw_head_pose(self):
         '''
         Draw head pose angle on the main frame
         head_pose: output from the head pose model
@@ -221,24 +306,63 @@ class OutputHandler:
         face_coords: The coords of the bounding box for face base on the predictin
         frame the main frame use passed to the face detection model. shape (H x W X C)
         '''
-        yaw = head_pose['angle_y_fc']
-        pitch = head_pose['angle_p_fc']
-        roll = head_pose['angle_r_fc']
+        yaw = self.head_pose_pred['angle_y_fc']
+        pitch = self.head_pose_pred['angle_p_fc']
+        roll = self.head_pose_pred['angle_r_fc']
         focal_length = 950.0
         scale = 50
-
-        x_min, y_min, x_man, y_max = face_coords
-
-        head_pose_y = head_pose_frame.shape[0]
-        head_pose_x = head_pose_frame.shape[1]
-        center_of_face_x = head_pose_x / 2
-        center_of_face_y = head_pose_y / 2
-
-        face_resize_ratio_x = head_pose_x / face.shape[1]
-        face_resize_ratio_y = head_pose_y / face.shape[0]
-        center_of_face_x = (center_of_face_x  / face_resize_ratio_x) + x_min
-        center_of_face_y = (center_of_face_y  / face_resize_ratio_y) + y_min
-        center_of_face = (center_of_face_x, center_of_face_y, 0)
-        head_frame = self.draw_axes(frame, center_of_face, yaw, pitch, roll, scale, focal_length)
+        center_of_face = self.get_center_of_face()
+        head_frame = self.draw_axes(self.frame, center_of_face, yaw, pitch, roll, scale, focal_length)
         
         return head_frame
+    
+    def output_visualizer(self):
+        # control all forms of visualizing output
+        if self.visualize:
+            landmark_predictions = self.draw_facial_landmarks(self.landmarks_coords, self.landmarks_frame, self.frame.shape[1], self.frame.shape[0])
+            self.write_frame(landmark_predictions, self.landmark_prediction_writer, self.width, self.height)
+
+            # draw facial landmarks
+            for key, coord in landmarks_coords.items():
+                landmarks_frame = self.draw_landmark(coord, pred[0][0], copied_frame, self.face_frame, self.landmarks_frame)
+                self.write_frame(landmarks_frame, self.landmark_drawings_writer,self. width, self.height)
+
+            # draw bounding boxes on face and eyes
+            # also draw circle on eyes
+            self.frame = self.draw_boxes(self.face_pred, self.frame, 0.6)
+            self.frame = self.draw_landmark(self.frame, self.left_eye_center)
+            self.frame = self.draw_landmark(self.frame, self.right_eye_center)
+            self.write_frame(_frameface, self.cropped_face_video_writer, self.width, self.height)
+            self.write_frame(frame, self.output_video_with_drawings_writer, self.width, self.height)
+
+        if self.visualize_face and not self.visualize:
+            self.write_frame(face, self.cropped_face_video_writer, self.width, self.height)
+
+        if self.visualize_landmarks and not self.visualize:
+            landmark_predictions = self.draw_facial_landmarks(self.landmarks_coords, self.landmarks_frame, self.frame.shape[1], self.frame.shape[0])
+            self.write_frame(landmark_predictions, self.landmark_prediction_writer, self.width, self.height)
+
+            # draw facial landmarks
+            for key, coord in self.landmarks_coords.items():
+                landmark_point = self.get_point_of_landmark(coord, self.face_coords, self.frame, self.face_frame, self.landmarks_frame)
+                landmarks_frame = self.draw_landmark(self.frame, landmark_point)
+                self.write_frame(landmarks_frame, self.landmark_drawings_writer, self.width, self.height)
+
+        if self.visualize_output and not self.visualize:
+            frame = self.draw_boxes(self.face_pred, self.frame, 0.6)
+            frame = self.draw_landmark(self.frame, self.left_eye_center)
+            frame = self.draw_landmark(self.frame, self.right_eye_center)
+            self.write_frame(frame, self.output_video_with_drawings_writer, self.width, self.height)
+        
+        if self.visualize_head_pose:
+            head_frame = self.draw_head_pose()
+            self.write_frame(head_frame, self.head_pose_angle_writer, self.width, self.height)
+        
+        if self.visualize_gaze:
+            x, y = self.gaze_estimate[0, :2]
+            head_frame = self.draw_head_pose()
+            self.frame = cv2.arrowedLine(self.frame, self.left_eye_center, (int(self.left_eye_center[0]+x*200), int(self.left_eye_center[1]-y*200)), (0, 120, 20), 2)
+            self.frame = cv2.arrowedLine(self.frame, self.right_eye_center, (int(self.right_eye_center[0]+x*200), int(self.right_eye_center[1]-y*200)), (0, 120, 20), 2)
+
+            self.write_frame(self.frame, self.gaze_direction_writer, self.width, self.height)
+            cv2.imwrite('gaze.jpg', self.frame)
