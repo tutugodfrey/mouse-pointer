@@ -63,22 +63,39 @@ It is easy to simply modify the run_app.sh file to your desired setting for runn
 
 mouse_pointer/ : project root
             ./bin/
+
                 ./demo.mp4 - A demo video 
+
             ./src/  - project source files directory
+
                   ./facial_landmarks_detection.py contains the code for handling the facial landmark detection model
+
                   ./head_pose_estimation.py - contains the code to handling the head pose estimation model
+
                   ./input_feeder.py - contains the code to load inputs that will be passed to the models
+
                   ./mouse_controller.py - contains the code to move the mouse using the prediciton from the gaze estimation model
+
                   ./utils.py - helper file for post post processing and handling output from the model (like visualising the output)
+
                   ./face_detection.py  - contains the code for handling the face detection model
+
                   ./gaze_estimation.py - contains code for handling the gaze estimation model
+
                   ./inference_pipeline.py
+
                   ./run_inference.py - file that uses the models to perform the actual inference on input frames
-            ./model
+
+            ./models/intel - models directory
+
             ./run_app.sh - bash script for running inference
+
             .requirements.txt - contains python packages required for running the application
+
             ./README.md  - project description
-            env/ - if you have created a virtual environment following the instructions above, you should have this directory
+
+            ./env/ - if you have created a virtual environment following the instructions above, you should have this directory
+
 
 
 
@@ -96,8 +113,11 @@ Below is a description of various argument that passed to the model and how to v
 `./models/intel/model_name/precision/model_name.{xml,bin}`. When this is the case. You can change the precision for each model by passing commandline argument as follows.
 
 `-lm` to pass the desired precision for the facial landmark detection. e.g `-lm FP32`
+
 `-gz` to pass the desired precision for the gaze estimation model. e.g `-gz FP32`
+
 `-hd` to pass the sried precision for the head pose estimation model e.g `-gz FP32`
+
 `-fd` to pass the desired precision for the face detection model e.g `-fd INT1` INT one is the only precision available at time of developing this application, so it the default value.
 
 **Device** This is the device to use for running inference like `CPU`, `VPU`. To pass a desired device use the `-d` flag e.g `-d CPU`. `CPU` is the default value.
@@ -109,14 +129,21 @@ Below is a description of various argument that passed to the model and how to v
 **Visualizing the output of intermediate models:** There are several ways to visualize the output of intermediate models depending on what your focus is. Each of the models have flag set to allow you visualize the outputs or your might just what to see everyone of them. The argument for visualizing the output are described below. The default value for each is `0` if you simple what to use the application without caring about the output. 
 
 `-v 1` To see all possible output from the models.
+
 `-vf 1` Visualize output from the face detection model. this will crop out the detected face from the original image, it will also draw a bounding pose of the detected face in the original image
+
 `-vh 1` to visualize the output from the head pose estimation model
+
 `-vl 1` to visualize the output from the landmark estimation model. You'll see the landmarks drawn on the frames.
+
 `-vg 1` to visualize the gaze estimation model. Draws an arraw line in the eyes pointing in the direction of gaze.
+
 `-vo 1` this will visualize a combination of output from intermediate model in one original image
 
 **Controlling the mouse pointer:** There are two flag to control the mouse pointer
+
 `-p` for precision. This will determine how far the mouse should move acceptable values are `high`, `low`, `medium`. The default value is `low`. Low (low) precision mean the mouse will move very far and high is the otherwise.
+
 `-s` for speed. This will determine how fast the mouse should move. Accepteable values are `fast`, `slow`, `medium`. The default value is `fast`
 
 
