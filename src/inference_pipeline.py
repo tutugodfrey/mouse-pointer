@@ -61,11 +61,20 @@ def main():
     gaze_estimation = GazeEstimation(model_name=gaze_model, device=device, extensions=cpu_extensions)
 
     # Load the models
+    start_time = time.time()
     face_detector.load_model()
+    face_detector_loadtime = time.time() - start_time
+    start_time = time.time()
     facial_landmarks.load_model()
+    facial_landmark_loadtime = time.time() - start_time
+    start_time = time.time()
     head_pose_estimation.load_model()
+    head_pose_estimation_loadtime = time.time() - start_time
+    start_time = time.time()
     gaze_estimation.load_model()
+    gaze_estimation_loadtime = time.time() - start_time
     logging.info('FINISH LOADING MODELS')
+
     try:
         width, height = input_feeder.load_data()
     except TypeError:
@@ -88,7 +97,6 @@ def main():
         if start_time == 0:
             start_time = time.time()
 
-        frame_count += 1
         if inputs == 0 and time.time() - start_time >= 1:
             gaze_estimate = run_inference(frame, face_detector, facial_landmarks, head_pose_estimation, gaze_estimation, output_handler)
             if gaze_estimate is None:
@@ -98,6 +106,7 @@ def main():
                 x, y = gaze_estimate[0][:2]
                 control_mouse.move(x, y)
             start_time = 0
+            frame_count += 1
         elif not inputs == 0:
             gaze_estimate = run_inference(frame, face_detector, facial_landmarks, head_pose_estimation, gaze_estimation, output_handler)
             if gaze_estimate is None:
@@ -107,9 +116,14 @@ def main():
                 x, y = gaze_estimate[0][:2]
                 control_mouse.move(x, y)
                 start_time = 0
+            frame_count += 1
 
     input_feeder.close()
     logging.info('TOTOAL FRAMES PROCESSED: {}'.format(frame_count))
+    logging.info('Time to load face detector model is {:.5f}'.format(face_detector_loadtime))
+    logging.info('Time to load head pose estimation model is {:.5f}'.format(head_pose_estimation_loadtime))
+    logging.info('Time to load facial landmarks model model is {:.5f}'.format(facial_landmark_loadtime))
+    logging.info('Time to load gaze estimation model is {:.5f}'.format(gaze_estimation_loadtime))
 
 if __name__ == '__main__':
     main()
