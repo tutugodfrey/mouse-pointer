@@ -155,6 +155,19 @@ The tables below show for load time and inference time for each model with diffe
 The result is achieve by using the video at bin/demo.mp4 width a 0.5 second delay  between execution of frame.
 Total frames processed is `595`
 
+**Model sizes**
+
+| Name                  | Size of FP32 | Size of PF16 | Size of INT  |
+|-----------------------|--------------|--------------|--------------|
+| Face Detection        |       x      |  x           | 2.3 MBb      |
+| Facial Landmark Model | 807 KB       |  414 KB      |       x      |
+| Head Pose Estimation  | 7.7 MB       |  4.2 MB      |       x      |
+| Gaze Estimation       | 7.7 MB       |  4 MB        | 7.8 MB       |
+|                       | -            |  -           |       -      |
+
+
+**Model Load time and Inference time at glance**
+
 | Name                  | Load T. FP32 | Load T. PF16 | Load T. INT  | AVG Infer T. FP32 | AVG Infer T  FP16 |  AVG Infer T. INT  |
 |-----------------------|--------------|--------------|--------------|-------------------|-------------------|------------------- |
 | Face Detection        |       x      |  x           | 0.21873      |      x            | x                 | 0.01578            |
@@ -163,7 +176,10 @@ Total frames processed is `595`
 | Gaze Estimation       | 0.08480      |  0.10630     | 0.12865      | 0.00210           | 0.00218           | 0.00170            |
 |                       | -            |  -           |       -      |                   |                   |                    |
 
+
 #### Facial landmank compare FP32 and FP16 over 10 interaction (inference time)
+
+**Diff = FP32 - FP16**
 
 | FP16              | FP32              | Diff              |
 |-------------------|-------------------|-------------------|
@@ -180,6 +196,8 @@ Total frames processed is `595`
 |                   |                   |                   |
 
 #### Head pose estimation compare FP32 and FP16 over 10 iteraction (inference time)
+
+**Diff = FP32 - FP16**
 
 | FP16              | FP32              | Diff              |
 |-------------------|-------------------|-------------------|
@@ -198,6 +216,8 @@ Total frames processed is `595`
 
 #### Gaze estimation compare FP32 and FP16 over 10 iteration (inference time)
 
+**Diff = FP32 - FP16**
+
 | FP16              | FP32              | Diff              |
 |-------------------|-------------------|-------------------|
 | 0.00215           | 0.00222           | 0.00007           |
@@ -214,6 +234,8 @@ Total frames processed is `595`
 
 
 #### Facial landmark compare FP32 and FP16 over 10 interaction (load time)
+
+**Diff = FP32 - FP16**
 
 | FP16              | FP32              | Diff              |
 |-------------------|-------------------|-------------------|
@@ -232,6 +254,8 @@ Total frames processed is `595`
 
 #### Head pose estimation compare FP32 and FP16 over 10 iteraction (load time)
 
+**Diff = FP32 - FP16**
+
 | FP16              | FP32              | Diff              |
 |-------------------|-------------------|-------------------|
 | 0.09077           | 0.06270           | -0.02807          |
@@ -248,6 +272,8 @@ Total frames processed is `595`
 
 
 #### Gaze estimation compare FP32 and FP16 over 10 iteration (load time)
+
+**Diff = FP32 - FP16**
 
 | FP16              | FP32              | Diff              |
 |-------------------|-------------------|-------------------|
@@ -266,11 +292,31 @@ Total frames processed is `595`
 ## Results
 *TODO:* Discuss the benchmark results and explain why you are getting the results you are getting. For instance, explain why there is difference in inference time for FP32, FP16 and INT8 models.
 
+The benchmark results above shows model sizes, load time and inference time. I will embark on discussion some of this reasons for the differences in this section.
+
+**Model Size:**
+As we can see from the chart above, the sizes of the model differs depending on whether it FP32 and FP16, INT8. FP32 models are generally much larger compare to FP16 because of the extra space required to store bits. We can also see that int8 is much larger than FP32 for similar reason.
+
+**Load Time:**
+To benchmark the load time of the models I track the load time for then consecutive executions as shown in the result above for both FP32 and FP16. Though the time was not done alternatively, we can see that there some difference in the load time for FP32 and FP16 with FP32 taking more time to load. That is to be expected loading that the model sizes and noting that FP32 model are generally larger that FP16.
+
+**Inference Time:**
+The recording above is the average time for infering 595 total frame from the demo video with 0.5 second interval between processing frames. I like to point out again that frame processing is handled differently for video and camera as the use of video is simple be for experimentation and testing purpose. That said, we see that are some marginal/ negligible difference in the inference time for FP32 and FP16. The general trend is that FP32 takes less time to infer compare to FP16. Since the comparison was not done alternatively, it hard to tell how the two compare. But if we take a look at the single run in the first table we can see that FP32 takes less time to infer compare to FP16 we can observe this behavior. This was not what I was expectng at first, so I research on it a bit. One possible reason that FP32 takes less time to run would be because intel CPU are built for 32/64 bits. While CPU now support 16 bits they internally scale to 32 bits (See reference below) The scaling time might very much contribute to the overall inference time for FP16. While the difference in inference time might be negligigle, it can add up  and impact the overvall performance of our systems hence the need to always consider where there are bottlenecks in the application to do proper optimization.
+
+**Under Resulting IR precision**
+[Optimization Guide](https://docs.openvinotoolkit.org/latest/_docs_optimization_guide_dldt_optimization_guide.html)
+
+**Comparing load time and Inference time of the different models:** 
+
+Observation from the tables above also help us to see that the size of the model, the number of operations have an effect in the load time and inference time. For example, the face detection model takes significantly more time to infer compared to the other models because the image size it accepts is much larger that the others. We can also observe that gaze estimation model and head pose estimation model takes more time to load compare to facial landmark model because they are larger in size.
+
 ## Stand Out Suggestions
 This is where you can provide information about the stand out suggestions that you have attempted.
+N/A
 
 ### Async Inference
 If you have used Async Inference in your code, benchmark the results and explain its effects on power and performance of your project.
+N/A
 
 ### Edge Cases
 
@@ -285,3 +331,5 @@ In this section I detail edge cases and consideration that are made to ensure be
   **Remedy** To prevent this from happen, I set condition to detect when the mouse pointer position is greater than the screen size the particular direction and reset it position to be at the very edge (x-min=0, y-min=0, x-max=screen_size_x, y-max=screen_size_y). The way the mouse pointer positions will alway remain at the edge it value exceed the edge of the screen
 
 3. **More than one person in the frame:** It is possible for more that one person to be in the screen, or image. If that is the case the application will use only the first face detected.
+
+**Lighting:** For effective use of the application on camera stream, it is important that there be adequate lighting in operational environment. If there is not enough lighting the application will simple exit reporting that 'No more frame to read' and the camera stream will stop.

@@ -276,8 +276,8 @@ class OutputHandler:
         zaxis1 = np.dot(R, zaxis1) + o
         xp2 = (xaxis[0] / xaxis[2] * camera_matrix[0][0]) + cx
         yp2 = (yaxis[1] / yaxis[2] * camera_matrix[1][1]) + cy
-        # p2 = (int(xp2) + 40, int(yp2) + 40)
-        p2 = (int(xp2), int(yp2))
+        p2 = (int(xp2) + 40, int(yp2) + 40)
+        # p2 = (int(xp2), int(yp2))
         cv2.line(frame, (cx, cy), p2, (0, 0, 225), 2)
 
         xp2 = (yaxis[0] / yaxis[2] * camera_matrix[0][0]) + cx
@@ -319,7 +319,8 @@ class OutputHandler:
     def output_visualizer(self):
         # control all forms of visualizing output
         if self.visualize:
-            landmark_predictions = self.draw_facial_landmarks(self.landmarks_coords, self.landmarks_frame, self.frame.shape[1], self.frame.shape[0])
+            frame = self.frame.copy()
+            landmark_predictions = self.draw_facial_landmarks(self.landmarks_coords, self.landmarks_frame, frame.shape[1], frame.shape[0])
             self.write_frame(landmark_predictions, self.landmark_prediction_writer, self.width, self.height)
 
             # draw facial landmarks
@@ -329,9 +330,9 @@ class OutputHandler:
 
             # draw bounding boxes on face and eyes
             # also draw circle on eyes
-            self.frame = self.draw_boxes(self.face_pred, self.frame, 0.6)
-            self.frame = self.draw_landmark(self.frame, self.left_eye_center)
-            self.frame = self.draw_landmark(self.frame, self.right_eye_center)
+            frame = self.draw_boxes(self.face_pred, frame, 0.6)
+            frame = self.draw_landmark(frame, self.left_eye_center)
+            frame = self.draw_landmark(frame, self.right_eye_center)
             self.write_frame(_frameface, self.cropped_face_video_writer, self.width, self.height)
             self.write_frame(frame, self.output_video_with_drawings_writer, self.width, self.height)
 
@@ -339,19 +340,21 @@ class OutputHandler:
             self.write_frame(face, self.cropped_face_video_writer, self.width, self.height)
 
         if self.visualize_landmarks and not self.visualize:
-            landmark_predictions = self.draw_facial_landmarks(self.landmarks_coords, self.landmarks_frame, self.frame.shape[1], self.frame.shape[0])
+            frame = self.frame.copy()
+            landmark_predictions = self.draw_facial_landmarks(self.landmarks_coords, self.landmarks_frame, frame.shape[1], frame.shape[0])
             self.write_frame(landmark_predictions, self.landmark_prediction_writer, self.width, self.height)
 
             # draw facial landmarks
             for key, coord in self.landmarks_coords.items():
-                landmark_point = self.get_point_of_landmark(coord, self.face_coords, self.frame, self.face_frame, self.landmarks_frame)
-                landmarks_frame = self.draw_landmark(self.frame, landmark_point)
+                landmark_point = self.get_point_of_landmark(coord, self.face_coords, frame, self.face_frame, self.landmarks_frame)
+                landmarks_frame = self.draw_landmark(frame, landmark_point)
                 self.write_frame(landmarks_frame, self.landmark_drawings_writer, self.width, self.height)
 
         if self.visualize_output and not self.visualize:
-            frame = self.draw_boxes(self.face_pred, self.frame, 0.6)
-            frame = self.draw_landmark(self.frame, self.left_eye_center)
-            frame = self.draw_landmark(self.frame, self.right_eye_center)
+            frame = self.frame.copy()
+            frame = self.draw_boxes(self.face_pred, frame, 0.6)
+            frame = self.draw_landmark(frame, self.left_eye_center)
+            frame = self.draw_landmark(frame, self.right_eye_center)
             self.write_frame(frame, self.output_video_with_drawings_writer, self.width, self.height)
         
         if self.visualize_head_pose:
@@ -359,10 +362,11 @@ class OutputHandler:
             self.write_frame(head_frame, self.head_pose_angle_writer, self.width, self.height)
         
         if self.visualize_gaze:
+            frame = self.frame.copy()
             x, y = self.gaze_estimate[0, :2]
             head_frame = self.draw_head_pose()
-            self.frame = cv2.arrowedLine(self.frame, self.left_eye_center, (int(self.left_eye_center[0]+x*200), int(self.left_eye_center[1]-y*200)), (0, 120, 20), 2)
-            self.frame = cv2.arrowedLine(self.frame, self.right_eye_center, (int(self.right_eye_center[0]+x*200), int(self.right_eye_center[1]-y*200)), (0, 120, 20), 2)
+            frame = cv2.arrowedLine(frame, self.left_eye_center, (int(self.left_eye_center[0]+x*200), int(self.left_eye_center[1]-y*200)), (0, 120, 20), 2)
+            frame = cv2.arrowedLine(frame, self.right_eye_center, (int(self.right_eye_center[0]+x*200), int(self.right_eye_center[1]-y*200)), (0, 120, 20), 2)
 
-            self.write_frame(self.frame, self.gaze_direction_writer, self.width, self.height)
-            cv2.imwrite('gaze.jpg', self.frame)
+            self.write_frame(frame, self.gaze_direction_writer, self.width, self.height)
+            cv2.imwrite('gaze.jpg', frame)
