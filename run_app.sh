@@ -11,11 +11,11 @@ if [[ $INPUT_TYPE == '' ]]; then # use default setting
   python3 src/inference_pipeline.py
 
 elif [[ $INPUT_TYPE == 'cam' ]]; then
-  python3 src/inference_pipeline.py -i cam -lm FP32 -gz FP32 -hd FP32 -p low -s medium -vh 1 -vg 1 -vo 1 -vl 1
+  python3 src/inference_pipeline.py -i cam -lm FP32 -gz FP32 -hd FP32 -p low -s medium -vh 1 -vg 1 -vl 1
 
 elif [[ $INPUT_TYPE == 'video' ]]; then
-  python3 src/inference_pipeline.py -i ./bin/demo.mp4 -lm FP32 -gz FP32 -hd FP32 -p low -s medium -vh 1 -vg 1 -vo 1 -vl 1
+  python3 src/inference_pipeline.py -i ./bin/demo.mp4 -lm FP32 -gz FP32 -hd FP32 -p low -s medium -vh 1 -vg 1 -vl 1
 
 elif [[ $INPUT_TYPE == 'image' ]]; then
-  python3 src/inference_pipeline.py -i ./bin/test_image1.jpg -lm FP32 -gz FP32 -hd FP32 -p low -s medium -vh 1 -vg 1 -vo 1 -vl 1
+  python3 src/inference_pipeline.py -i ./bin/test_image1.jpg -lm FP32 -gz FP32 -hd FP32 -p low -s medium -vh 1 -vg 1 -vl 1
 fi
